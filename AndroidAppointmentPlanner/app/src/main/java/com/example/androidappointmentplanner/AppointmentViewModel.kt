@@ -1,5 +1,6 @@
 package com.example.androidappointmentplanner
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,15 +30,28 @@ class AppointmentViewModel(val dao: AppointmentDao) : ViewModel() {
                 val date = state.value.date
                 if (title.isBlank()) return
                 val appointment = Appointment(title, desc, date)
-                viewModelScope.launch { dao.save(appointment) }
-                _state.update {
-                    it.copy(
-                        title = ""
-                    )
+                try {
+                    Log.d("STATE", "Starting persisting...")
+                    viewModelScope.launch { dao.save(appointment) }
+                    _state.update {
+                        it.copy(
+                            title = "",
+                            description = "",
+                            date = ""
+                        )
+                    }
+                } catch (e : Exception) {
+                    Log.d("STATE", "ERROR: " + e.message)
                 }
             }
             is AppointmentEvent.SetTitleEvent -> {
                 _state.update { it.copy(title = event.title) }
+            }
+            is AppointmentEvent.SetDescriptionEvent -> {
+                _state.update { it.copy(description = event.description) }
+            }
+            is AppointmentEvent.SetDateEvent -> {
+                _state.update { it.copy(date = event.date) }
             }
         }
     }

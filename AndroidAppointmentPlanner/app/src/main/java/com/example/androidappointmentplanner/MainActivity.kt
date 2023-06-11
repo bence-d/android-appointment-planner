@@ -43,7 +43,7 @@ class MainActivity : ComponentActivity() {
         factoryProducer = {
             object : ViewModelProvider.Factory {
                  override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return AppointmentViewModel(db.personDao()) as T
+                    return AppointmentViewModel(db.appointmentDao()) as T
                 }
             }
         }
@@ -120,7 +120,27 @@ fun NewAppointmentForm(
             onValueChange = {
                 appointmentEvent(AppointmentEvent.SetTitleEvent(it))
             },
-            label = { Text(text = "Name") }
+            label = { Text(text = "Titel") }
+        )
+    }
+
+    Row() {
+        TextField(
+            value = state.description,
+            onValueChange = {
+                appointmentEvent(AppointmentEvent.SetDescriptionEvent(it))
+            },
+            label = { Text(text = "Beschreibung") }
+        )
+    }
+
+    Row() {
+        TextField(
+            value = state.date,
+            onValueChange = {
+                appointmentEvent(AppointmentEvent.SetDateEvent(it))
+            },
+            label = { Text(text = "Datum") }
         )
         Button(
             onClick = { appointmentEvent(AppointmentEvent.SetAppointmentEvent) }

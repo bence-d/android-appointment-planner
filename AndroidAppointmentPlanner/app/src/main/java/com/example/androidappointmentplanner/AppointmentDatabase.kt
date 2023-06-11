@@ -11,5 +11,5 @@ import androidx.room.RoomDatabase
 abstract class AppointmentDatabase : RoomDatabase(){
 
     //abstract val dao: AppointmentDao
-    abstract fun personDao(): AppointmentDao
+    abstract fun appointmentDao(): AppointmentDao
 }

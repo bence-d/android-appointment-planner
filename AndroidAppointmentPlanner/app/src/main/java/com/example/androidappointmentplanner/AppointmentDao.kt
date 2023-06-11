@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface AppointmentDao {
     @Upsert
-    fun save(appointment: Appointment)
+    suspend fun save(appointment: Appointment)
 
     @Delete
-    fun delete(appointment: Appointment)
+    suspend fun delete(appointment: Appointment)
 
     @Query("SELECT * from Appointment ORDER BY title ASC")
     fun findAll(): Flow<List<Appointment>>
