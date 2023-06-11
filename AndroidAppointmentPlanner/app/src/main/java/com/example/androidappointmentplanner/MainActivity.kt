@@ -3,6 +3,7 @@ package com.example.androidappointmentplanner
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
+import android.util.Log
 import android.widget.DatePicker
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -37,6 +38,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.room.Room
 import com.example.androidappointmentplanner.ui.theme.AndroidAppointmentPlannerTheme
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.DateTimeParseException
 import java.util.Calendar
 import java.util.Date
 
@@ -179,7 +183,23 @@ fun NewAppointmentForm(
         val mDatePickerDialog = DatePickerDialog(
             mContext,
             { _: DatePicker, mYear: Int, mMonth: Int, mDayOfMonth: Int ->
-                mDate.value = "$mDayOfMonth/${mMonth+1}/$mYear"
+                mDate.value = ""
+
+                if ((mDayOfMonth + 1) < 10) {
+                    mDate.value += "0${mDayOfMonth}";
+                } else {
+                    mDate.value += mDayOfMonth
+                }
+
+                mDate.value += "/"
+
+                if ((mMonth + 1) < 10) {
+                    mDate.value += "0${mMonth+1}";
+                } else {
+                    mDate.value += mMonth+1
+                }
+
+                mDate.value += "/$mYear";
             }, mYear, mMonth, mDay
         )
 
@@ -238,6 +258,21 @@ fun NewAppointmentForm(
     Row() {
         Button(
             onClick = {
+                Log.d("STATE", mTime.value)
+                Log.d("STATE", mDate.value)
+
+                val stringDate = "${mDate.value.format("dd/MM/yyyy")} ${mTime.value}";
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+                var dt = LocalDateTime.now();
+                try {
+                    dt = LocalDateTime.parse(stringDate, formatter)
+                } catch (e : DateTimeParseException) {
+                    Log.d("STATE","cant parse [$stringDate]")
+                    Log.d("STATE", "to [$formatter]")
+                }
+
+                AppointmentEvent.SetDateEvent(dt)
                 appointmentEvent(AppointmentEvent.SetAppointmentEvent)
             }
         ) {
