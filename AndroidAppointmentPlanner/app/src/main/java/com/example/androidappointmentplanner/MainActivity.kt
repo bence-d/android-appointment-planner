@@ -148,6 +148,10 @@ fun NewAppointmentForm(
         )
     }
 
+    // Declaring a string value to
+    // store date in string format
+    val mDate = remember { mutableStateOf("") }
+
     // Calendar
     Row() {
 
@@ -169,10 +173,6 @@ fun NewAppointmentForm(
         mDay = mCalendar.get(Calendar.DAY_OF_MONTH)
 
         mCalendar.time = Date()
-
-        // Declaring a string value to
-        // store date in string format
-        val mDate = remember { mutableStateOf("") }
 
         // Declaring DatePickerDialog and setting
         // initial values as current values (present year, month and day)
@@ -198,6 +198,9 @@ fun NewAppointmentForm(
         }
     }
 
+    // Value for storing time as a string
+    val mTime = remember { mutableStateOf("") }
+
     // Time
     Row() {
         // Fetching local context
@@ -207,9 +210,6 @@ fun NewAppointmentForm(
         val mCalendar = Calendar.getInstance()
         val mHour = mCalendar[Calendar.HOUR_OF_DAY]
         val mMinute = mCalendar[Calendar.MINUTE]
-
-        // Value for storing time as a string
-        val mTime = remember { mutableStateOf("") }
 
         // Creating a TimePicker dialod
         val mTimePickerDialog = TimePickerDialog(
@@ -237,7 +237,9 @@ fun NewAppointmentForm(
     // Save
     Row() {
         Button(
-            onClick = { appointmentEvent(AppointmentEvent.SetAppointmentEvent) }
+            onClick = {
+                appointmentEvent(AppointmentEvent.SetAppointmentEvent)
+            }
         ) {
             Text(text = "Save")
         }
