@@ -1,6 +1,8 @@
 package com.example.androidappointmentplanner
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,16 +11,21 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.sql.Date
+import java.time.LocalDateTime
 
 class AppointmentViewModel(val dao: AppointmentDao) : ViewModel() {
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private val _state = MutableStateFlow(AppointmentState())
+    @RequiresApi(Build.VERSION_CODES.O)
     val state = combine(dao.findAll(), _state) { actAppoint, state ->
         state.copy(
             appointments = actAppoint
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppointmentState())
 
+    @RequiresApi(Build.VERSION_CODES.O)
     fun handleEvent(event: AppointmentEvent) {
         when (event) {
             is AppointmentEvent.DeleteAppointmentEvent -> {
@@ -37,7 +44,7 @@ class AppointmentViewModel(val dao: AppointmentDao) : ViewModel() {
                         it.copy(
                             title = "",
                             description = "",
-                            date = ""
+                            date = LocalDateTime.now()
                         )
                     }
                 } catch (e : Exception) {
