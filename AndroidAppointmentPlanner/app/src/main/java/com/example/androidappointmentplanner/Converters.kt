@@ -1,25 +1,20 @@
 package com.example.androidappointmentplanner
 
-import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.room.TypeConverter
-import java.sql.Date
 import java.time.LocalDateTime
-import java.time.format.DateTimeParseException
+import java.time.format.DateTimeFormatter
 
 class Converters {
+    private val formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+
     @TypeConverter
     fun fromTimestamp(value: String?): LocalDateTime? {
-
-        try {
-            return value?.let { LocalDateTime.parse(it) }
-        } catch (e : DateTimeParseException) {
-            return value.let { LocalDateTime.now() }
-        }
+        return value?.let { LocalDateTime.parse(it, formatter) }
     }
 
     @TypeConverter
     fun dateToTimestamp(date: LocalDateTime?): String? {
-        return date?.toString()
+        return date?.format(formatter)
     }
 }
