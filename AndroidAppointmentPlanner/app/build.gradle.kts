@@ -98,5 +98,9 @@ dependencies {
     // optional - Paging 3 Integration
     implementation("androidx.room:room-paging:$room_version")
 
+    // navigation
     implementation("androidx.navigation:navigation-compose:2.5.3")
+
+    // google fonts
+    implementation("androidx.compose.ui:ui-text-google-fonts:1.2.0-beta02")
 }

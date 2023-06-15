@@ -4,24 +4,29 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.util.Log
 import android.widget.DatePicker
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -30,11 +35,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -68,7 +78,7 @@ fun Navigation(
     val navController = rememberNavController()
     NavHost(navController = navController, startDestination = "main") {
         composable(route = "main") {
-            AppointmentList(state = viewModel.state.collectAsState(), appointmentEvent = viewModel::handleEvent, navController = navController)
+            AppointmentList(state = viewModel.state.collectAsState(), navController = navController)
         }
         composable(
             route = "detail/{appointmentId}",
@@ -81,17 +91,25 @@ fun Navigation(
             DetailScreen(
                 navController = navController,
                 appointmentId = it.arguments?.getString("appointmentId"),
-                state = viewModel.state.collectAsState()
+                state = viewModel.state.collectAsState(),
+                appointmentEvent = viewModel::handleEvent
             )
         }
 
         composable(
-            route = "detail/create"
+            route = "detail/create/{appointmentId}",
+            arguments = listOf(
+                navArgument("appointmentId") {
+                    type = NavType.StringType
+                }
+            )
         ) {
             NewAppointmentForm(
                 state = viewModel.state.collectAsState(),
                 appointmentEvent = viewModel::handleEvent,
-                navController = navController)
+                navController = navController,
+                appointmentId = it.arguments?.getString("appointmentId")
+            )
         }
     }
 }
@@ -101,319 +119,808 @@ fun Navigation(
 @Composable
 fun AppointmentList(
     state: State<AppointmentState>,
-    appointmentEvent: (AppointmentEvent) -> Unit,
     navController: NavController
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize()
+    Log.d("State", "entered appointmentlist..")
+
+    Log.d("State", "reading items..")
+    var appointments = state.value.appointments;
+
+    Column (
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.hsv(0.0f, 0.0f, 0.14f, 1f, colorSpace = ColorSpaces.Srgb))
     ) {
-        Button (
-            onClick = {
-                navController.navigate("detail/create")
-            },
+        Text(
+            "TERMINE",
+            color = Color.hsv(345.0f, 1.0f, 0.73f, 1f, colorSpace = ColorSpaces.Srgb),
+            fontSize = 35.sp,
+            fontFamily = fontFamily,
             modifier = Modifier
-                .padding(5.dp, 5.dp, 0.dp, 50.dp)
-                .width(IntrinsicSize.Max)
+                .align(Alignment.CenterHorizontally)
+                .padding(0.dp, 30.dp, 0.dp, 20.dp)
+        )
+
+        Divider(
+            color = Color.hsv(0.0f, 0.0f, 1f, 0.3f, colorSpace = ColorSpaces.Srgb),
+            thickness = 2.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
+                .padding(0.dp, 0.dp, 0.dp, 30.dp)
+        )
+
+        // Add Appointment
+
+        Log.d("state", "Generating add apointment button")
+        Button(
+            onClick = {
+                navController.navigate("detail/create/-1")
+            },
+            colors = ButtonDefaults.buttonColors(
+
+                containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            border = BorderStroke(
+                0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            shape = RoundedCornerShape(10),
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                .height(55.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
+
         ) {
-            Text(text = "Termin erstellen")
+            Icon(
+                imageVector = Icons.Default.AddCircle,
+                contentDescription = "Add Appointment",
+            )
         }
+        Log.d("state", "after generating button...")
 
-        for (appointment in state.value.appointments) {
-            Row() {
-                Text(
-                    text = appointment.title,
-                    fontSize = 25.sp,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable {
+        // Temine löschen
+
+        if (state.value.appointments.isNotEmpty()) {
+            Log.d("State", "Trying to Listing out appointments...")
+            for (appointment in state.value.appointments) {
+
+                if (appointment.date < LocalDateTime.now()) {
+                    // Example Appointment
+                    Button(
+                        onClick = {
                             navController.navigate("detail/${appointment.id}")
-                        }
-                        .padding(10.dp)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.hsv(
+                                345.0f,
+                                1.0f,
+                                0.43f,
+                                1.0f,
+                                colorSpace = ColorSpaces.Srgb
+                            )
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            Color.hsv(0.0f, 0.0f, 1.0f, 0.25f, colorSpace = ColorSpaces.Srgb)
+                        ),
+                        shape = RoundedCornerShape(10),
+                        modifier = Modifier
+                            .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                            .height(55.dp)
+                            .fillMaxWidth(0.9f)
+                            .align(Alignment.CenterHorizontally)
 
-                )
-                Text(
-                    text = appointment.id.toString(),
-                    fontSize = 25.sp,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(10.dp)
+                    ) {
+                        Text(text = appointment.title)
+                    }
+                } else {
+                    // Example Appointment
+                    Button(
+                        onClick = {
+                            navController.navigate("detail/${appointment.id}")
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.hsv(
+                                0.0f,
+                                0.0f,
+                                0.31f,
+                                0.0f,
+                                colorSpace = ColorSpaces.Srgb
+                            )
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            Color.hsv(0.0f, 0.0f, 1.0f, 0.25f, colorSpace = ColorSpaces.Srgb)
+                        ),
+                        shape = RoundedCornerShape(10),
+                        modifier = Modifier
+                            .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                            .height(55.dp)
+                            .fillMaxWidth(0.9f)
+                            .align(Alignment.CenterHorizontally)
 
-                )
-                IconButton(
-                    onClick = {  appointmentEvent(AppointmentEvent.DeleteAppointmentEvent(appointment)) },
-                    modifier = Modifier
-                        .size(60.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete Appointment",
-                    )
+                    ) {
+                        Text(text = appointment.title)
+                    }
                 }
+                Log.d("State", "Listing out appointments...")
+
             }
+        } else {
+            Log.d("state", "state is empty")
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailScreen(
-    navController: NavController, appointmentId: String?,
+    navController: NavController,
+    appointmentId: String?,
     state: State<AppointmentState>,
+    appointmentEvent: (AppointmentEvent) -> Unit
 ) {
+    Log.d("State", "entered detailscreen")
+
+    val provider = GoogleFont.Provider(
+        providerAuthority = "com.google.android.gms.fonts",
+        providerPackage = "com.google.android.gms",
+        certificates = R.array.com_google_android_gms_fonts_certs
+    )
+
+    val fontName = GoogleFont("Iceland")
+
+    val fontFamily = FontFamily(
+        Font(
+            googleFont = fontName,
+            fontProvider = provider,
+            weight = FontWeight.W400,
+            style= FontStyle.Normal
+        )
+    )
+
+
     var appointmentIdRes = 0;
 
     // to-do: Fehlermeldung im Fall aber es sollte eh nie vorkommen?
     if (appointmentId == null) {
-        navController.navigate("main")
+        Log.d("State", "appointmentId null -> returning to main")
+        //navController.navigate("main")
     } else {
         appointmentIdRes = appointmentId.toInt();
     }
 
     val appointment =
-        state.value.appointments.first  { it.id == appointmentIdRes }
+        state.value.appointments.firstOrNull { it.id == appointmentIdRes }
 
-    Text(
-        text = "Titel: ${appointment.title}",
-        color = Color.Blue,
-        fontSize = 30.sp,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(0.dp, 5.dp)
-    )
-    Text(
-        text = "Beschreibung: ${appointment.description}",
-        color = Color.Blue,
-        fontSize = 30.sp,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(0.dp, 50.dp)
-            .width(IntrinsicSize.Max)
-    )
-    Text(
-        text = "Datum: ${appointment.date.toString()}",
-        color = Color.Blue,
-        fontSize = 30.sp,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(0.dp, 100.dp)
-            .width(IntrinsicSize.Max)
-    )
+    if (appointment == null) {
+        Log.d("State", "appointment object null -> returning to main")
+        //navController.navigate("main")
+    } else {
+        Column (
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.hsv(0.0f, 0.0f, 0.14f, 1f, colorSpace = ColorSpaces.Srgb))
+        ) {
+            Text(
+                "TERMIN DETAILS",
+                color = Color.hsv(345.0f, 1.0f, 0.73f, 1f, colorSpace = ColorSpaces.Srgb),
+                fontSize = 35.sp,
+                fontFamily = fontFamily,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(0.dp, 30.dp, 0.dp, 20.dp)
+            )
 
-    Button (
-        onClick = {
-            navController.navigate("main")
-        },
-        modifier = Modifier
-            .padding(5.dp, 200.dp)
-            .width(IntrinsicSize.Max)
-    ) {
-        Text(text = "Zurück")
+            Divider(
+                color = Color.hsv(0.0f, 0.0f, 1f, 0.3f, colorSpace = ColorSpaces.Srgb),
+                thickness = 2.dp,
+                modifier = Modifier
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally)
+                    .padding(0.dp, 0.dp, 0.dp, 30.dp)
+            )
+
+            OutlinedTextField(
+                value = appointment.title,
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.0f, colorSpace = ColorSpaces.Srgb),
+                    textColor = Color.White,
+                    focusedLabelColor = Color.hsv(0.0f, 0.0f, 1f, 0.5f, colorSpace = ColorSpaces.Srgb),
+                    focusedIndicatorColor = Color.hsv(
+                        0.0f,
+                        0.0f,
+                        1f,
+                        0.5f,
+                        colorSpace = ColorSpaces.Srgb
+                    ),
+                    disabledTextColor = Color.White,
+                    disabledLabelColor = Color.White
+
+                ),
+                onValueChange = {
+
+                },
+                label = { Text(text = "Titel") },
+                singleLine = true,
+                modifier = Modifier
+                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                    .height(80.dp)
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally),
+                readOnly = true
+            )
+
+            OutlinedTextField(
+                value = appointment.description,
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.0f, colorSpace = ColorSpaces.Srgb),
+                    textColor = Color.White,
+                    focusedLabelColor = Color.hsv(0.0f, 0.0f, 1f, 0.5f, colorSpace = ColorSpaces.Srgb),
+                    focusedIndicatorColor = Color.hsv(
+                        0.0f,
+                        0.0f,
+                        1f,
+                        0.5f,
+                        colorSpace = ColorSpaces.Srgb
+                    ),
+                    disabledTextColor = Color.White,
+                    disabledLabelColor = Color.White
+
+                ),
+                onValueChange = {
+
+                },
+                label = { Text(text = "Beschreibung") },
+                singleLine = false,
+                modifier = Modifier
+                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                    .height(100.dp)
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally),
+                readOnly = true
+            )
+
+            OutlinedTextField(
+                value = "Datum: " + appointment.date.dayOfMonth + "/" + appointment.date.monthValue + "/" + appointment.date.year,
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.0f, colorSpace = ColorSpaces.Srgb),
+                    textColor = Color.White,
+                    focusedLabelColor = Color.hsv(0.0f, 0.0f, 1f, 0.5f, colorSpace = ColorSpaces.Srgb),
+                    focusedIndicatorColor = Color.hsv(
+                        0.0f,
+                        0.0f,
+                        1f,
+                        0.5f,
+                        colorSpace = ColorSpaces.Srgb
+                    ),
+                    disabledTextColor = Color.White,
+                    disabledLabelColor = Color.White
+
+                ),
+                onValueChange = {
+
+                },
+                label = { Text(text = "Titel") },
+                singleLine = true,
+                modifier = Modifier
+                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                    .height(80.dp)
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally),
+                readOnly = true
+            )
+
+            OutlinedTextField(
+                value = "Zeit: " + appointment.date.hour + ":" + appointment.date.minute,
+                colors = TextFieldDefaults.textFieldColors(
+                    containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.0f, colorSpace = ColorSpaces.Srgb),
+                    textColor = Color.White,
+                    focusedLabelColor = Color.hsv(0.0f, 0.0f, 1f, 0.5f, colorSpace = ColorSpaces.Srgb),
+                    focusedIndicatorColor = Color.hsv(
+                        0.0f,
+                        0.0f,
+                        1f,
+                        0.5f,
+                        colorSpace = ColorSpaces.Srgb
+                    ),
+                    disabledTextColor = Color.White,
+                    disabledLabelColor = Color.White
+
+                ),
+                onValueChange = {
+
+                },
+                label = { Text(text = "Zeit") },
+                singleLine = true,
+                modifier = Modifier
+                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                    .height(80.dp)
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally),
+                readOnly = true
+            )
+
+            // Edit
+
+            Button(
+                onClick = {
+                    navController.navigate("detail/create/${appointmentId}")
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+                ),
+                border = BorderStroke(
+                    0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+                ),
+                shape = RoundedCornerShape(10),
+                modifier = Modifier
+                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                    .height(55.dp)
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally)
+
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Termin bearbeiten",
+                )
+            }
+
+            // Löschen
+
+            for (actAppointment in state.value.appointments) {
+                if (appointmentId != null) {
+                    if (actAppointment.id == appointmentId.toInt()) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                        ) {
+                            Button(
+                                onClick = {
+                                    Log.d("State", "Termin löschen...")
+                                    appointmentEvent(AppointmentEvent.DeleteAppointmentEvent(actAppointment))
+                                    navController.navigate("main")
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.hsv(
+                                        0.0f,
+                                        0.0f,
+                                        0.31f,
+                                        0.5f,
+                                        colorSpace = ColorSpaces.Srgb
+                                    )
+                                ),
+                                border = BorderStroke(
+                                    0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+                                ),
+                                shape = RoundedCornerShape(10),
+                                modifier = Modifier
+                                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                                    .height(55.dp)
+                                    .fillMaxWidth(0.9f)
+
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Termin Löschen",
+                                )
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Zurück
+
+            Button(
+                onClick = {
+                    navController.navigate("main")
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+                ),
+                border = BorderStroke(
+                    0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+                ),
+                shape = RoundedCornerShape(10),
+                modifier = Modifier
+                    .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                    .height(55.dp)
+                    .fillMaxWidth(0.9f)
+                    .align(Alignment.CenterHorizontally)
+
+            ) {
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowLeft,
+                    contentDescription = "Zurück zum Menü",
+                )
+            }
+        }
     }
 }
+
+val provider = GoogleFont.Provider(
+    providerAuthority = "com.google.android.gms.fonts",
+    providerPackage = "com.google.android.gms",
+    certificates = R.array.com_google_android_gms_fonts_certs
+)
+
+val fontName = GoogleFont("Iceland")
+
+val fontFamily = FontFamily(
+    Font(
+        googleFont = fontName,
+        fontProvider = provider,
+        weight = FontWeight.W400,
+        style= FontStyle.Normal
+    )
+)
+
+var latestEditedID = -1;
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewAppointmentForm(
     state: State<AppointmentState>,
     appointmentEvent: (AppointmentEvent) -> Unit,
-    navController: NavController
+    navController: NavController,
+    appointmentId: String?
 ) {
-    Column() {
+    if (appointmentId != null && appointmentId.toInt() != -1 && latestEditedID != appointmentId.toInt()) {
+        val appointmentIdRes = appointmentId.toInt();
+        latestEditedID = appointmentIdRes;
+
+        val appointment =
+            state.value.appointments.first { it.id == appointmentIdRes }
+
+        Log.d("STATE", "Setting stuff...")
+        appointmentEvent(AppointmentEvent.SetTitleEvent(appointment.title))
+        appointmentEvent(AppointmentEvent.SetDescriptionEvent(appointment.description))
+        appointmentEvent(AppointmentEvent.SetDateEvent(appointment.date))
+    }
+
+    Column (
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.hsv(0.0f, 0.0f, 0.14f, 1f, colorSpace = ColorSpaces.Srgb))
+    ) {
+        Text(
+            "TERMIN BEARBEITEN",
+            color = Color.hsv(345.0f, 1.0f, 0.73f, 1f, colorSpace = ColorSpaces.Srgb),
+            fontSize = 35.sp,
+            fontFamily = fontFamily,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(0.dp, 30.dp, 0.dp, 20.dp)
+        )
+
+        Divider(
+            color = Color.hsv(0.0f, 0.0f, 1f, 0.3f, colorSpace = ColorSpaces.Srgb),
+            thickness = 2.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
+                .padding(0.dp, 0.dp, 0.dp, 30.dp)
+        )
+
         // Title
-        Row() {
-            TextField(
-                value = state.value.title,
-                onValueChange = {
-                    appointmentEvent(AppointmentEvent.SetTitleEvent(it))
-                },
-                label = { Text(text = "Titel") }
-            )
-        }
 
-        // Description
-        Row() {
-            TextField(
-                value = state.value.description,
-                onValueChange = {
-                    appointmentEvent(AppointmentEvent.SetDescriptionEvent(it))
-                },
-                label = { Text(text = "Beschreibung") }
-            )
-        }
+        val maxTitleLength = 30
 
-        // Declaring a string value to
-        // store date in string format
+        OutlinedTextField(
+            value = state.value.title,
+            colors = TextFieldDefaults.textFieldColors(
+                containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.0f, colorSpace = ColorSpaces.Srgb),
+                textColor = Color.White,
+                focusedLabelColor = Color.hsv(0.0f, 0.0f, 1f, 0.5f, colorSpace = ColorSpaces.Srgb),
+                focusedIndicatorColor = Color.hsv(
+                    0.0f,
+                    0.0f,
+                    1f,
+                    0.5f,
+                    colorSpace = ColorSpaces.Srgb
+                )
+
+            ),
+            onValueChange = {
+                if (it.length <= maxTitleLength) appointmentEvent(AppointmentEvent.SetTitleEvent(it))
+            },
+
+            label = { Text(text = "Titel") },
+            singleLine = true,
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                .height(80.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally),
+            supportingText = {
+                Text(
+                    text = "${state.value.title.length} / $maxTitleLength",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                )
+            }
+        )
+
+        val maxDescLength = 200
+
+        OutlinedTextField(
+            value = state.value.description,
+            colors = TextFieldDefaults.textFieldColors(
+                containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.0f, colorSpace = ColorSpaces.Srgb),
+                textColor = Color.White,
+                focusedLabelColor = Color.hsv(0.0f, 0.0f, 1f, 0.5f, colorSpace = ColorSpaces.Srgb),
+                focusedIndicatorColor = Color.hsv(
+                    0.0f,
+                    0.0f,
+                    1f,
+                    0.5f,
+                    colorSpace = ColorSpaces.Srgb
+                )
+            ),
+            onValueChange = {
+                if (it.length <= maxDescLength) appointmentEvent(
+                    AppointmentEvent.SetDescriptionEvent(
+                        it
+                    )
+                )
+            },
+            label = { Text(text = "Beschreibung") },
+            singleLine = false,
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                .height(155.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally),
+            supportingText = {
+                Text(
+                    text = "${state.value.description.length} / $maxDescLength",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.End,
+                )
+            }
+        )
+
+        // Datum
+
         val mDate = remember { mutableStateOf("") }
 
-        // Calendar
-        Row() {
+        // Fetching the Local Context
+        val mContext = LocalContext.current
 
-            // Fetching the Local Context
-            val mContext = LocalContext.current
+        // Declaring integer values
+        // for year, month and day
+        val mYear: Int
+        val mMonth: Int
+        val mDay: Int
 
-            // Declaring integer values
-            // for year, month and day
-            val mYear: Int
-            val mMonth: Int
-            val mDay: Int
+        // Initializing a Calendar
+        val mCalendar = Calendar.getInstance()
 
-            // Initializing a Calendar
-            val mCalendar = Calendar.getInstance()
+        // Fetching current year, month and day
+        mYear = mCalendar.get(Calendar.YEAR)
+        mMonth = mCalendar.get(Calendar.MONTH)
+        mDay = mCalendar.get(Calendar.DAY_OF_MONTH)
 
-            // Fetching current year, month and day
-            mYear = mCalendar.get(Calendar.YEAR)
-            mMonth = mCalendar.get(Calendar.MONTH)
-            mDay = mCalendar.get(Calendar.DAY_OF_MONTH)
+        mCalendar.time = Date()
 
-            mCalendar.time = Date()
+        // Declaring DatePickerDialog and setting
+        // initial values as current values (present year, month and day)
+        val mDatePickerDialog = DatePickerDialog(
+            mContext,
+            { _: DatePicker, mYear: Int, mMonth: Int, mDayOfMonth: Int ->
+                mDate.value = ""
 
-            // Declaring DatePickerDialog and setting
-            // initial values as current values (present year, month and day)
-            val mDatePickerDialog = DatePickerDialog(
-                mContext,
-                { _: DatePicker, mYear: Int, mMonth: Int, mDayOfMonth: Int ->
-                    mDate.value = ""
+                if ((mDayOfMonth + 1) < 10) {
+                    mDate.value += "0${mDayOfMonth}";
+                } else {
+                    mDate.value += mDayOfMonth
+                }
 
-                    if ((mDayOfMonth + 1) < 10) {
-                        mDate.value += "0${mDayOfMonth}";
-                    } else {
-                        mDate.value += mDayOfMonth
-                    }
+                mDate.value += "/"
 
-                    mDate.value += "/"
+                if ((mMonth + 1) < 10) {
+                    mDate.value += "0${mMonth + 1}";
+                } else {
+                    mDate.value += mMonth + 1
+                }
 
-                    if ((mMonth + 1) < 10) {
-                        mDate.value += "0${mMonth+1}";
-                    } else {
-                        mDate.value += mMonth+1
-                    }
+                mDate.value += "/$mYear";
+            }, mYear, mMonth, mDay
+        )
 
-                    mDate.value += "/$mYear";
-                }, mYear, mMonth, mDay
+        Button(
+            onClick = {
+                mDatePickerDialog.show()
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.hsv(0.0f, 0.0f, 0.5f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            border = BorderStroke(
+                0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            shape = RoundedCornerShape(10),
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 10.dp)
+                .height(55.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
+
+        ) {
+            Text(
+                text = "Datum   "
+            )
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = "Datum Auswählen",
             )
 
-            Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                // Displaying the mDate value in the Text
-                Text(text = "Selected Date: ${mDate.value}", fontSize = 22.sp, textAlign = TextAlign.Center)
-            }
-
-
-            Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Button(
-                    onClick = { mDatePickerDialog.show() }
-                ) {
-                    Text(text = "Save")
-                }
-            }
         }
 
-        // Value for storing time as a string
-        val mTime = remember { mutableStateOf("") }
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(0.0.dp, 0.0.dp, 0.0.dp, 5.0.dp)
+        ) {
+            Text(
+                text = "Selected Date: ${mDate.value}",
+                fontSize = 15.sp,
+                color = Color.hsv(0.0f, 0.0f, 1.0f, 0.2f, colorSpace = ColorSpaces.Srgb),
+                textAlign = TextAlign.Center
+            )
+        }
 
         // Time
-        Row() {
-            // Fetching local context
-            val mContext = LocalContext.current
 
-            // Declaring and initializing a calendar
-            val mCalendar = Calendar.getInstance()
-            val mHour = mCalendar[Calendar.HOUR_OF_DAY]
-            val mMinute = mCalendar[Calendar.MINUTE]
+        val mTime = remember { mutableStateOf("") }
+        val mHour = mCalendar[Calendar.HOUR_OF_DAY]
+        val mMinute = mCalendar[Calendar.MINUTE]
 
-            // Creating a TimePicker dialod
-            val mTimePickerDialog = TimePickerDialog(
-                mContext,
-                {_, mHour : Int, mMinute: Int ->
-                    mTime.value = "$mHour:$mMinute"
-                }, mHour, mMinute, false
+        // Creating a TimePicker dialog
+        val mTimePickerDialog = TimePickerDialog(
+            mContext,
+            { _, mHour: Int, mMinute: Int ->
+                mTime.value = String.format("%02d:%02d", mHour, mMinute)
+            }, mHour, mMinute, false
+        )
+
+        Button(
+            onClick = {
+                mTimePickerDialog.show()
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.hsv(0.0f, 0.0f, 0.5f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            border = BorderStroke(
+                0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            shape = RoundedCornerShape(10),
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 10.dp)
+                .height(55.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
+
+        ) {
+            Text(
+                text = "Zeit   "
+            )
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = "Zeit Auswählen",
             )
 
-            Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                // Displaying the mDate value in the Text
-                Text(text = "Selected Time: ${mTime.value}", fontSize = 22.sp, textAlign = TextAlign.Center)
-            }
-
-
-            Column(verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                Button(
-                    onClick = { mTimePickerDialog.show() }
-                ) {
-                    Text(text = "Save")
-                }
-            }
         }
 
-        // Save
-        Row() {
-            Button(
-                onClick = {
-                    Log.d("STATE", mTime.value)
-                    Log.d("STATE", mDate.value)
+        Row(
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(0.0.dp, 0.0.dp, 0.0.dp, 5.0.dp)
+        ) {
+            Text(
+                text = "Selected Time: ${mTime.value}",
+                fontSize = 15.sp,
+                color = Color.hsv(0.0f, 0.0f, 1.0f, 0.2f, colorSpace = ColorSpaces.Srgb),
+                textAlign = TextAlign.Center
+            )
+        }
 
-                    val stringDate = "${mDate.value.format("dd/MM/yyyy")} ${mTime.value}";
-                    val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+        // Add Appointment
 
-                    var dt = LocalDateTime.now();
-                    try {
-                        dt = LocalDateTime.parse(stringDate, formatter)
-                    } catch (e : DateTimeParseException) {
-                        Log.d("STATE","cant parse [$stringDate]")
-                        Log.d("STATE", "to [$formatter]")
-                    }
+        Button(
+            onClick = {
+                Log.d("STATE", mTime.value)
+                Log.d("STATE", mDate.value)
 
-                    AppointmentEvent.SetDateEvent(dt)
+                val stringDate = "${mDate.value.format("dd/MM/yyyy")} ${mTime.value}";
+                val formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+                var dt = LocalDateTime.now();
+                try {
+                    dt = LocalDateTime.parse(stringDate, formatter)
+                } catch (e: DateTimeParseException) {
+                    Log.d("STATE", "cant parse [$stringDate]")
+                    Log.d("STATE", "to [$formatter]")
+                }
+
+                appointmentEvent(AppointmentEvent.SetDateEvent(dt))
+
+                if (appointmentId != null && appointmentId.toInt() != -1) {
+                    val appointmentIdRes = appointmentId.toInt();
+
+                    val appointment =
+                        state.value.appointments.first { it.id == appointmentIdRes }
+                    appointmentEvent(AppointmentEvent.DeleteAppointmentEvent(appointment = appointment))
+                    appointmentEvent(AppointmentEvent.SetAppointmentEvent)
+                    navController.navigate("main")
+                } else {
                     appointmentEvent(AppointmentEvent.SetAppointmentEvent)
                     navController.navigate("main")
                 }
-            ) {
-                Text(text = "Save")
-            }
-        }
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            border = BorderStroke(
+                0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            shape = RoundedCornerShape(10),
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                .height(55.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
 
-        Button (
-            onClick = {
-                navController.navigate("main")
-            }
         ) {
-            Text(text = "Zurück")
-        }
-    }
-}
-
-// Originale
-
-/*
-@Composable
-fun MainScreen(navController: NavController) {
-    Column() {
-        for (customer in customers) {
-            Text(
-                text = "${customer.userId} - ${customer.userName}",
-                color = Color.Blue,
-                fontSize = 30.sp,
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .padding(5.dp)
-                    .clickable {
-                        navController.navigate("detail/${customer.userId}")
-                    }
+            Icon(
+                imageVector = Icons.Default.AddCircle,
+                contentDescription = "Add Appointment",
             )
         }
+
+        // Zurück
+
+        Button(
+            onClick = {
+                navController.navigate("main")
+            },
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            border = BorderStroke(
+                0.dp, Color.hsv(0.0f, 0.0f, 0.31f, 0.5f, colorSpace = ColorSpaces.Srgb)
+            ),
+            shape = RoundedCornerShape(10),
+            modifier = Modifier
+                .padding(0.dp, 5.dp, 0.dp, 20.dp)
+                .height(55.dp)
+                .fillMaxWidth(0.9f)
+                .align(Alignment.CenterHorizontally)
+
+        ) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowLeft,
+                contentDescription = "Zurück zum Menü",
+            )
+        }
+
+        if (appointmentId != null && appointmentId.toInt() != -1) {
+            val appointmentIdRes = appointmentId.toInt();
+
+            val appointment =
+                state.value.appointments.firstOrNull { it.id == appointmentIdRes }
+
+            if (appointment != null) {
+                mTimePickerDialog.updateTime(appointment.date.hour, appointment.date.minute)
+                mDatePickerDialog.updateDate(
+                    appointment.date.year,
+                    appointment.date.monthValue,
+                    appointment.date.dayOfMonth
+                )
+            }
+        }
     }
 }
-
-@Composable
-fun DetailScreen(navController: NavController, customerId: String?) {
-    val customer = customers.first { it.userId == customerId }
-    Text(
-        text = "${customer.userName}",
-        color = Color.Blue,
-        fontSize = 30.sp,
-        modifier = Modifier
-            .fillMaxWidth(0.9f)
-            .padding(5.dp)
-    )
-}
- */
-
-
-

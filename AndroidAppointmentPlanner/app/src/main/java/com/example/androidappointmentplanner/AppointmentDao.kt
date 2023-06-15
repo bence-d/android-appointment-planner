@@ -14,6 +14,6 @@ interface AppointmentDao {
     @Delete
     suspend fun delete(appointment: Appointment)
 
-    @Query("SELECT * from Appointment ORDER BY title ASC")
+    @Query("SELECT * from Appointment ORDER BY date ASC")
     fun findAll(): Flow<List<Appointment>>
 }

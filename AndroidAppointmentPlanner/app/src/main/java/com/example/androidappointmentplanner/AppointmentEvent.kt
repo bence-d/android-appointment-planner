@@ -9,4 +9,6 @@ sealed class AppointmentEvent {
     data class SetDateEvent(val date: LocalDateTime) : AppointmentEvent()
     data class DeleteAppointmentEvent(val appointment: Appointment) : AppointmentEvent()
     object SetAppointmentEvent : AppointmentEvent()
+
+
 }
